@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elevate | AI Career &amp; Resume Platform</title>
+<meta name="description" content="Elevate helps students and job seekers build ATS-friendly resumes, get AI career guidance, write professional letters and find jobs — all in one place.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="main.css">
+<link rel="stylesheet" href="home.css">
+<link rel="stylesheet" href="professional.css">
+</head>
+<body>
+
+<!-- ================= HEADER ================= -->
+<header class="site-header">
+  <div class="container nav-wrap">
+    <a href="index.html" class="brand">
+      <span class="brand-mark"><i class="bi bi-rocket-takeoff-fill"></i></span>
+      Elevate
+    </a>
+
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html" data-page="index.html">Home</a>
+      <a href="dashboard.html" data-page="dashboard.html">Dashboard</a>
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#about">About</a>
+      <a href="resume-builder.html" class="btn btn-primary btn-sm mobile-cta">Build Resume</a>
+    </nav>
+
+    <div class="nav-actions"><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode" title="Toggle theme"><i class="bi bi-moon-stars"></i><span class="visually-hidden">Toggle theme</span></button>
+      <a href="resume-builder.html" class="btn btn-primary btn-sm">
+        <i class="bi bi-file-earmark-person"></i> Build Resume
+      </a>
+      <span data-auth-slot></span><button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+        <i class="bi bi-list"></i>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="home" class="hero">
+  <div class="container hero-grid">
+
+    <div class="hero-copy">
+      <span class="badge-pill"><i class="bi bi-stars"></i> Smart Career Platform</span>
+
+      <h1>Build your resume.<br><span>Build your future.</span></h1>
+
+      <p class="hero-text">
+        Elevate helps students and early-career professionals create ATS-friendly resumes,
+        get personalised career guidance, write polished letters, and discover real job
+        opportunities — all from a single, elegant workspace.
+      </p>
+
+      <div class="hero-trust">
+        <div><strong>4</strong><span>Career tools</span></div>
+        <div><strong>100%</strong><span>Browser-based</span></div>
+        <div><strong>ATS</strong><span>Friendly output</span></div>
+      </div>
+    </div>
+
+    <div class="hero-visual reveal">
+      <div class="hero-card">
+        <div class="hero-card-top">
+          <div>
+            <small>YOUR CAREER</small>
+            <h4>Elevated <i class="bi bi-rocket-takeoff-fill"></i></h4>
+          </div>
+          <i class="bi bi-graph-up-arrow hero-card-icon"></i>
+        </div>
+
+        <div class="progress-list">
+          <div class="progress-item">
+            <div class="progress-label"><span>Resume Strength</span><span>85%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:85%"></div></div>
+          </div>
+          <div class="progress-item">
+            <div class="progress-label"><span>Skill Match</span><span>70%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:70%"></div></div>
+          </div>
+          <div class="progress-item">
+            <div class="progress-label"><span>Career Readiness</span><span>78%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:78%"></div></div>
+          </div>
+        </div>
+
+        <div class="hero-card-footer">
+          <i class="bi bi-shield-check"></i> ATS-optimised &amp; recruiter approved
+        </div>
+      </div>
+
+      <div class="floating-chip chip-1"><i class="bi bi-check-circle-fill"></i> Resume saved</div>
+      <div class="floating-chip chip-2"><i class="bi bi-lightning-charge-fill"></i> Smart suggestion ready</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= LOGO STRIP ================= -->
+<div class="logo-strip">
+  <div class="container logo-strip-inner">
+    <span>Trusted by students moving into</span>
+    <div class="logo-row">
+      <span><i class="bi bi-building"></i> Startups</span>
+      <span><i class="bi bi-bank"></i> Enterprises</span>
+      <span><i class="bi bi-mortarboard"></i> Campus Placements</span>
+      <span><i class="bi bi-globe2"></i> Remote Teams</span>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PRODUCT SNAPSHOT ================= -->
+<section class="stats-strip" aria-label="Elevate platform highlights">
+  <div class="container">
+    <div class="stats-grid reveal">
+      <div class="stat-item"><strong>4</strong><span>Connected career tools</span></div>
+      <div class="stat-item"><strong>ATS</strong><span>Resume-first workflow</span></div>
+      <div class="stat-item"><strong>AI</strong><span>Guidance when you need it</span></div>
+      <div class="stat-item"><strong>1</strong><span>Career workspace</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FEATURES ================= -->
+<section id="features">
+  <div class="container">
+    <div class="section-heading reveal">
+      <span class="eyebrow">WHAT WE OFFER</span>
+      <h2>Everything you need for your career</h2>
+      <p>One connected platform to help you move confidently from education to employment.</p>
+    </div>
+
+    <div class="feature-grid">
+      <a href="resume-builder.html" class="feature-card reveal">
+        <div class="feature-icon"><i class="bi bi-file-earmark-text"></i></div>
+        <h4>ATS Resume Builder</h4>
+        <p>Create professional, ATS-friendly resumes with real-time preview and export.</p>
+        <span class="feature-link">Create resume <i class="bi bi-arrow-right"></i></span>
+      </a>
+
+      <a href="career-advisor.html" class="feature-card reveal">
+        <div class="feature-icon"><i class="bi bi-compass"></i></div>
+        <h4>Career Advisor</h4>
+        <p>Answer a short quiz and get personalised career paths and skill recommendations.</p>
+        <span class="feature-link">Get advice <i class="bi bi-arrow-right"></i></span>
+      </a>
+
+      <a href="job-search.html" class="feature-card reveal">
+        <div class="feature-icon"><i class="bi bi-briefcase"></i></div>
+        <h4>Job Search</h4>
+        <p>Search curated openings and jump straight into top job platforms.</p>
+        <span class="feature-link">Find jobs <i class="bi bi-arrow-right"></i></span>
+      </a>
+
+      <a href="letter-generator.html" class="feature-card reveal">
+        <div class="feature-icon"><i class="bi bi-envelope-paper"></i></div>
+        <h4>Smart Letter Writer</h4>
+        <p>Generate polished cover letters, SOPs and application letters in seconds.</p>
+        <span class="feature-link">Write letter <i class="bi bi-arrow-right"></i></span>
+      </a>
+
+      <div class="feature-card reveal">
+        <div class="feature-icon"><i class="bi bi-arrow-repeat"></i></div>
+        <h4>Career Gap Guidance</h4>
+        <p>Learn how to explain career gaps positively and present stronger applications.</p>
+        <span class="feature-link muted">Coming soon</span>
+      </div>
+
+      <div class="feature-card reveal">
+        <div class="feature-icon"><i class="bi bi-person-workspace"></i></div>
+        <h4>Portfolio Builder</h4>
+        <p>Create an elegant portfolio site to showcase your skills and projects.</p>
+        <span class="feature-link muted">Coming soon</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CAREER WORKSPACE ================= -->
+<section class="workspace-section">
+  <div class="container">
+    <div class="workspace-flow">
+      <a class="flow-item reveal" href="resume-builder.html"><span>01</span><i class="bi bi-file-earmark-person"></i><div><strong>Build</strong><small>Create your ATS-ready resume</small></div></a>
+      <a class="flow-item reveal" href="career-advisor.html"><span>02</span><i class="bi bi-compass"></i><div><strong>Discover</strong><small>Find a direction and skills to build</small></div></a>
+      <a class="flow-item reveal" href="job-search.html"><span>03</span><i class="bi bi-briefcase"></i><div><strong>Explore</strong><small>Search roles that fit your goals</small></div></a>
+      <a class="flow-item reveal" href="letter-generator.html"><span>04</span><i class="bi bi-envelope-paper"></i><div><strong>Apply</strong><small>Prepare a polished application letter</small></div></a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= QUICK START ================= -->
+<section class="quick-actions">
+  <div class="container">
+    <div class="section-heading reveal">
+      <span class="eyebrow">QUICK START</span>
+      <h2>Choose your next career move</h2>
+      <p>Jump straight into the tool you need and keep everything connected.</p>
+    </div>
+    <div class="quick-grid">
+      <a class="quick-card reveal" href="resume-builder.html"><span class="quick-icon"><i class="bi bi-file-earmark-person"></i></span><span><strong>Build a resume</strong><small>Start from a professional template</small></span><i class="bi bi-arrow-up-right ms-auto"></i></a>
+      <a class="quick-card reveal" href="job-search.html"><span class="quick-icon"><i class="bi bi-search"></i></span><span><strong>Find your next role</strong><small>Explore jobs and save opportunities</small></span><i class="bi bi-arrow-up-right ms-auto"></i></a>
+      <a class="quick-card reveal" href="career-advisor.html"><span class="quick-icon"><i class="bi bi-compass"></i></span><span><strong>Discover your direction</strong><small>Get a practical career starting point</small></span><i class="bi bi-arrow-up-right ms-auto"></i></a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW IT WORKS ================= -->
+<section id="how-it-works" class="how-section">
+  <div class="container">
+    <div class="section-heading reveal">
+      <span class="eyebrow">HOW IT WORKS</span>
+      <h2>From student to career-ready</h2>
+    </div>
+
+    <div class="step-grid">
+      <div class="step-card reveal">
+        <span class="step-number">01</span>
+        <i class="bi bi-person-plus"></i>
+        <h4>Create your profile</h4>
+        <p>Add your education, skills and experience in a guided form.</p>
+      </div>
+      <div class="step-card reveal">
+        <span class="step-number">02</span>
+        <i class="bi bi-file-earmark-check"></i>
+        <h4>Build your resume</h4>
+        <p>Generate a clean, ATS-friendly resume with live preview.</p>
+      </div>
+      <div class="step-card reveal">
+        <span class="step-number">03</span>
+        <i class="bi bi-robot"></i>
+        <h4>Get AI guidance</h4>
+        <p>Receive tailored career and education recommendations.</p>
+      </div>
+      <div class="step-card reveal">
+        <span class="step-number">04</span>
+        <i class="bi bi-rocket"></i>
+        <h4>Apply &amp; grow</h4>
+        <p>Find opportunities and start your career journey with confidence.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ABOUT ================= -->
+<section id="about">
+  <div class="container about-grid">
+    <div class="reveal">
+      <span class="eyebrow">ABOUT ELEVATE</span>
+      <h2>Your digital career companion</h2>
+      <p class="about-text">
+        Elevate is designed to support students and job seekers throughout their entire
+        career journey — from writing a first resume to landing an offer.
+      </p>
+      <p class="about-text">
+        Instead of juggling separate tools for resumes, career guidance, job searching and
+        professional writing, everything you need lives in one connected, easy-to-use platform.
+      </p>
+      <a href="resume-builder.html" class="btn btn-primary">Get started free</a>
+    </div>
+
+    <div class="about-box reveal">
+      <div class="about-item"><i class="bi bi-check-circle-fill"></i> ATS-friendly output</div>
+      <div class="about-item"><i class="bi bi-check-circle-fill"></i> Built for students</div>
+      <div class="about-item"><i class="bi bi-check-circle-fill"></i> Guided career insights</div>
+      <div class="about-item"><i class="bi bi-check-circle-fill"></i> Career-outcome focused</div>
+      <div class="about-item"><i class="bi bi-check-circle-fill"></i> Free to get started</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CTA ================= -->
+<section class="cta-section">
+  <div class="container cta-box reveal">
+    <h2>Ready to elevate your career?</h2>
+    <p>Build your first resume in minutes — no sign-up required to get started.</p>
+    <a href="resume-builder.html" class="btn btn-primary btn-lg">
+      <i class="bi bi-arrow-up-right-circle"></i> Start Building Now
+    </a>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="brand" style="color:#fff;">
+          <span class="brand-mark"><i class="bi bi-rocket-takeoff-fill"></i></span> Elevate
+        </a>
+        <p>Build your resume. Discover opportunities. Elevate your career — one step at a time.</p>
+        <div class="social-row">
+          <a href="#" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+          <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+          <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+        </div>
+      </div>
+      <div>
+        <h5>Tools</h5>
+        <ul>
+          <li><a href="resume-builder.html">Resume Builder</a></li>
+          <li><a href="career-advisor.html">Career Advisor</a></li>
+          <li><a href="letter-generator.html">Letter Generator</a></li>
+          <li><a href="job-search.html">Job Search</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Company</h5>
+        <ul>
+          <li><a href="index.html#about">About</a></li>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="index.html#how-it-works">How it Works</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Support</h5>
+        <ul>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Service</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span class="current-year"></span> Elevate. All rights reserved.</span>
+      <span>Made for students, by people who care about your career.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="main.js"></script><script src="js/auth.js"></script>
+</body>
+</html>

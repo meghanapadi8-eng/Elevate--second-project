@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Search | Elevate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="main.css">
+<link rel="stylesheet" href="job-search.css">
+<link rel="stylesheet" href="professional.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container nav-wrap">
+    <a href="index.html" class="brand"><span class="brand-mark"><i class="bi bi-rocket-takeoff-fill"></i></span> Elevate</a>
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html" data-page="index.html">Home</a>
+      <a href="dashboard.html" data-page="dashboard.html">Dashboard</a><a href="resume-builder.html" data-page="resume-builder.html">Resume Builder</a>
+      <a href="career-advisor.html" data-page="career-advisor.html">Career Advisor</a>
+      <a href="letter-generator.html" data-page="letter-generator.html">Letters</a>
+      <a href="job-search.html" data-page="job-search.html">Jobs</a><a href="application-tracker.html" data-page="application-tracker.html">Applications</a><a href="copilot.html" data-page="copilot.html">Copilot</a>
+    </nav>
+    <div class="nav-actions"><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode" title="Toggle theme"><i class="bi bi-moon-stars"></i><span class="visually-hidden">Toggle theme</span></button>
+      <a href="resume-builder.html" class="btn btn-primary btn-sm nav-build"><i class="bi bi-file-earmark-person"></i> Build Resume</a>
+      <span data-auth-slot></span><button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false"><i class="bi bi-list"></i></button>
+    </div>
+  </div>
+</header>
+
+<section class="page-hero">
+  <div class="container">
+    <span class="badge-pill"><i class="bi bi-briefcase"></i> Job Search</span>
+    <h1>Find opportunities that match your goals</h1>
+    <p>Search live job listings, filter by role and location, compare your resume match, and track applications.</p>
+  </div>
+</section>
+
+<section class="job-search-section">
+  <div class="container">
+
+    <div class="search-bar">
+      <div class="search-input">
+        <i class="bi bi-search"></i>
+        <input type="text" id="jobKeyword" placeholder="Job title or keyword — e.g. Frontend Developer">
+      </div>
+      <select class="input" id="jobLocation">
+        <option value="">Any location</option>
+        <option value="remote">Remote</option>
+        <option value="bangalore">Bangalore</option>
+        <option value="delhi">Delhi NCR</option>
+        <option value="mumbai">Mumbai</option>
+        <option value="hyderabad">Hyderabad</option>
+      </select>
+      <select class="input" id="jobType">
+        <option value="">Any type</option>
+        <option value="internship">Internship</option>
+        <option value="full-time">Full-time</option>
+        <option value="part-time">Part-time</option>
+      </select>
+      <button class="btn btn-primary" id="searchBtn"><i class="bi bi-search"></i> Search</button>
+      <button class="btn btn-outline-primary" id="clearFiltersBtn" type="button">Clear</button>
+    </div>
+
+    <div class="platform-row">
+      <span>Search directly on:</span>
+      <a href="#" id="linkLinkedIn" target="_blank" rel="noopener" class="platform-chip"><i class="bi bi-linkedin"></i> LinkedIn</a>
+      <a href="#" id="linkIndeed" target="_blank" rel="noopener" class="platform-chip"><i class="bi bi-briefcase"></i> Indeed</a>
+      <a href="#" id="linkNaukri" target="_blank" rel="noopener" class="platform-chip"><i class="bi bi-building"></i> Naukri</a>
+      <a href="#" id="linkGlassdoor" target="_blank" rel="noopener" class="platform-chip"><i class="bi bi-star"></i> Glassdoor</a>
+    </div>
+
+    <div class="results-meta">
+      <span id="resultsCount">Loading live opportunities</span>
+      <div class="job-toolbar-actions">
+        <button class="saved-toggle" id="savedToggle" type="button"><i class="bi bi-bookmark"></i> Saved <span id="savedCount">0</span></button>
+        <button class="saved-toggle" id="trackerToggle" type="button"><i class="bi bi-kanban"></i> Applications <span id="applicationCount">0</span></button>
+      </div>
+    </div>
+
+    <div class="job-grid" id="jobGrid"></div>
+    <p class="no-results hidden" id="noResults">No live opportunities match your filters. Try a broader role or location.</p>
+
+  </div>
+</section>
+
+<div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content job-details-modal">
+      <div class="modal-header">
+        <div><span class="eyebrow-small">JOB DETAILS</span><h3 id="jobModalTitle" class="modal-title">Job</h3></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="jobModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-outline-primary" id="analyzeFromModal"><i class="bi bi-stars"></i> Analyze match</button><button type="button" class="btn btn-primary" id="trackFromModal"><i class="bi bi-kanban"></i> Track application</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="container footer-bottom" style="border-top:none; padding-top:0;">
+    <span>© <span class="current-year"></span> Elevate. All rights reserved.</span>
+    <a href="index.html" style="color:#AEB6CE;">Back to Home</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="main.js"></script><script src="js/auth.js"></script>
+<script src="job-search.js"></script>
+</body>
+</html>

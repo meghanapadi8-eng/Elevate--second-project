@@ -1,0 +1,57 @@
+/* ===================== CAREER ADVISOR ===================== */
+
+.advisor-section{ padding-top:56px; }
+.advisor-layout{ display:grid; grid-template-columns:1.6fr 1fr; gap:28px; align-items:flex-start; }
+
+.advisor-card{
+  background:var(--white); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:var(--shadow-sm);
+  padding:38px; min-height:420px;
+}
+.advisor-progress{ margin-bottom:28px; }
+.advisor-progress-track{ height:8px; background:var(--bg-soft); border-radius:20px; overflow:hidden; }
+.advisor-progress-fill{ height:100%; width:0%; background:linear-gradient(90deg,var(--primary),var(--primary-2)); transition:width .3s ease; }
+.advisor-progress span{ display:block; margin-top:10px; font-size:12.5px; font-weight:700; color:var(--muted); }
+
+#quizQuestion{ font-size:1.35rem; margin-bottom:22px; }
+.option-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.option-btn{
+  text-align:left; padding:16px 18px; border-radius:var(--r-md); border:1.5px solid var(--border); background:var(--bg-soft);
+  font-weight:700; color:var(--text-strong); font-size:14.5px; transition:.2s;
+}
+.option-btn:hover{ border-color:var(--primary-2); background:var(--primary-soft); }
+.option-btn.selected{ border-color:var(--primary-2); background:var(--primary-light); color:var(--primary-2); }
+.quiz-nav{ display:flex; justify-content:space-between; margin-top:30px; }
+
+.hidden{ display:none !important; }
+
+.result-header{ display:flex; gap:16px; align-items:center; margin-bottom:18px; }
+.result-icon{
+  width:56px; height:56px; border-radius:16px; background:var(--primary-light); color:var(--primary-2);
+  display:flex; align-items:center; justify-content:center; font-size:26px; flex:none;
+}
+#resultTitle{ font-size:1.5rem; }
+.result-desc{ color:var(--muted); margin-bottom:26px; }
+.result-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.result-block{ background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--r-md); padding:20px; }
+.result-block h5{ display:flex; align-items:center; gap:8px; font-size:13.5px; margin-bottom:12px; color:var(--text-strong); }
+.result-block h5 i{ color:var(--primary-2); }
+.result-block ul{ display:flex; flex-direction:column; gap:8px; }
+.result-block li{ font-size:13.5px; color:var(--text); display:flex; align-items:center; gap:8px; }
+.result-block li::before{ content:"\2022"; color:var(--primary-2); font-weight:900; }
+.result-actions{ display:flex; gap:12px; margin-top:28px; flex-wrap:wrap; }
+
+.advisor-side{ display:flex; flex-direction:column; gap:18px; }
+.side-card{ background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--r-md); padding:22px; }
+.side-card i{ font-size:22px; color:var(--primary-2); }
+.side-card h4{ font-size:15px; margin:12px 0 8px; }
+.side-card p{ font-size:13.5px; color:var(--muted); }
+
+@media (max-width:860px){
+  .advisor-layout{ grid-template-columns:1fr; }
+  .option-grid{ grid-template-columns:1fr; }
+  .result-grid{ grid-template-columns:1fr; }
+}
+
+/* Professional page refinement */
+.advisor-card,.side-card{box-shadow:var(--shadow-sm);}
+.option-btn{transition:.2s ease;}.option-btn:hover{transform:translateY(-2px);}

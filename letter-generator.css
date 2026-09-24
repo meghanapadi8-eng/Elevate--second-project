@@ -1,0 +1,37 @@
+/* ===================== LETTER GENERATOR ===================== */
+
+.letter-section{ padding:56px 0 90px; }
+.letter-layout{ display:grid; grid-template-columns:1fr 1.1fr; gap:28px; align-items:flex-start; }
+
+.letter-form-card{
+  background:var(--white); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:var(--shadow-sm);
+  padding:30px; position:sticky; top:calc(var(--header-h) + 16px);
+}
+.tone-row{ display:flex; gap:10px; }
+.tone-btn{
+  flex:1; padding:10px; border-radius:var(--r-sm); border:1.5px solid var(--border); background:var(--bg-soft);
+  font-weight:700; font-size:13px; color:var(--muted);
+}
+.tone-btn.active{ background:var(--primary-2); border-color:var(--primary-2); color:#fff; }
+
+.letter-preview-card{
+  background:var(--white); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:var(--shadow-sm); overflow:hidden;
+}
+.letter-preview-toolbar{
+  display:flex; justify-content:space-between; align-items:center; padding:16px 22px; border-bottom:1px solid var(--border);
+  font-weight:700; font-size:13.5px; color:var(--muted); background:var(--bg-soft);
+}
+.letter-preview-toolbar i{ color:var(--primary-2); margin-right:6px; }
+.preview-actions{ display:flex; gap:10px; }
+
+.letter-paper{ padding:40px; min-height:480px; font-size:14.5px; color:#1F2937; line-height:1.9; white-space:pre-wrap; }
+.letter-empty{ text-align:center; padding:100px 20px; color:var(--faint); }
+.letter-empty i{ font-size:40px; display:block; margin-bottom:16px; color:var(--border); }
+
+@media (max-width:900px){
+  .letter-layout{ grid-template-columns:1fr; }
+  .letter-form-card{ position:static; }
+}
+
+/* Professional page refinement */
+.letter-form-card,.letter-preview-card{box-shadow:var(--shadow-sm);}
