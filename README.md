@@ -28,7 +28,7 @@ Job Search uses live listings from the Himalayas public jobs API when Adzuna cre
 
 ## Static preview
 
-The GitHub Pages workflow publishes the project at `https://meghanapadi8-eng.github.io/Elevate--second-project/`. This is a static preview only: GitHub Pages does not run the FastAPI backend or SQLite database, so sign-in and server-synced features require a separately hosted API.
+After enabling GitHub Pages with **Settings → Pages → Build and deployment → GitHub Actions**, the workflow publishes the project at `https://meghanapadi8-eng.github.io/Elevate--second-project/`. This is a static preview only: GitHub Pages does not run the FastAPI backend or SQLite database, so sign-in and server-synced features require a separately hosted API.
 
 ## Project structure
 
