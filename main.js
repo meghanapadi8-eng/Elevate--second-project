@@ -132,10 +132,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const items=[
       ["Resume Builder","Build or edit your ATS-friendly resume","resume-builder.html","bi-file-earmark-person"],
       ["Job Search","Find live opportunities and track applications","job-search.html","bi-briefcase"],
-      ["Career Advisor","Explore career directions and skills","career-advisor.html","bi-compass"],
+      ["Career","Explore career directions and build a 30-day plan","career-advisor.html","bi-compass"],
       ["Letter Generator","Create a polished application letter","letter-generator.html","bi-envelope-paper"],
       ["Dashboard","Open your career workspace","dashboard.html","bi-grid-1x2"],
-      ["AI Career Plan","Generate a personalized 30-day roadmap","career-plan.html","bi-stars"],
       ["Launch Center","Run final QA and deployment readiness checks","launch-center.html","bi-rocket-takeoff"]
     ];
     const input=palette.querySelector("#commandInput"), results=palette.querySelector("#commandResults");

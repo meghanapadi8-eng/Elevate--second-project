@@ -9,6 +9,7 @@
   const grid = document.getElementById("jobGrid");
   const noResults = document.getElementById("noResults");
   const resultsCount = document.getElementById("resultsCount");
+  const jobSourceNotice = document.getElementById("jobSourceNotice");
   const savedToggle = document.getElementById("savedToggle");
   const savedCount = document.getElementById("savedCount");
   const trackerToggle = document.getElementById("trackerToggle");
@@ -39,7 +40,6 @@
   }
 
   function jobKey(job) { return `${job.title}|${job.company}`; }
-
   function getResumeForMatching() {
     try {
       const resume = JSON.parse(localStorage.getItem("elevate_resume_data") || "null");
@@ -83,9 +83,10 @@
 
   function render(list) {
     grid.innerHTML = "";
-    noResults.classList.toggle("hidden", list.length > 0);
+    noResults.classList.toggle("d-none", list.length > 0);
+    noResults.textContent = "No live opportunities match your filters. Try a broader role or location.";
     resultsCount.textContent = list.length
-      ? `Showing ${list.length} ${showingSaved ? "saved" : "live"} opening${list.length > 1 ? "s" : ""}`
+      ? `Showing ${list.length} ${showingSaved ? "saved" : showingApplications ? "tracked" : "live"} opening${list.length > 1 ? "s" : ""}`
       : "No live jobs found";
 
     list.forEach(job => {
@@ -95,7 +96,7 @@
       card.innerHTML = `
         <div class="job-card-top">
           <div class="job-card-logo"><i class="bi ${iconFor(job.type)}"></i></div>
-          <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end"><span class="job-type-tag ${job.type === "internship" ? "internship" : ""}">${escapeHtml(job.type.replace("-", " "))}</span>${match ? `<span class="job-type-tag match-tag">${match}% match</span>` : ""}</div>
+          <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end"><span class="job-type-tag ${job.type === "internship" ? "internship" : ""}">${escapeHtml(job.type.replace("-", " "))}</span>${job.source ? `<a class="job-type-tag" href="${escapeHtml(job.sourceUrl || "https://himalayas.app")}" target="_blank" rel="noopener noreferrer">via ${escapeHtml(job.source)}</a>` : ""}${match ? `<span class="job-type-tag match-tag">${match}% match</span>` : ""}</div>
         </div>
         <h4>${escapeHtml(job.title)}</h4>
         <div class="job-card-company">${escapeHtml(job.company)}</div>
@@ -255,21 +256,38 @@
     lastSearch = { what: kw, where: loc, type };
     if (showingSaved || showingApplications) { render(showingApplications ? applications : savedJobs); return; }
     loadingJobs = true;
+    jobSourceNotice.classList.add("d-none");
     grid.innerHTML = `<div class="job-loading-state"><div class="spinner-border" role="status" aria-label="Loading"></div><p>Finding live opportunities…</p></div>`;
-    noResults.classList.add("hidden");
+    noResults.classList.add("d-none");
     try {
       const qs = new URLSearchParams({what: kw, where: loc, type, page: "1", limit: "20"});
-      const response = await fetch(`api/index.php/job-search?${qs.toString()}`, {headers:{Accept:"application/json"}});
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not load live jobs.");
-      jobs = Array.isArray(data.jobs) ? data.jobs : [];
+      const response = await fetch(`${window.ElevateAuth.url('/job-search')}?${qs.toString()}`, {headers:{Accept:"application/json"}});
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (data.configured === false) {
+          throw new Error("Live listings are not enabled by this server yet. Deploy the latest Elevate API update; the Himalayas listings source does not require an API key.");
+        }
+        throw new Error(data.error || `The jobs service returned an error (${response.status}).`);
+      }
+      const sourceUrl = data.sourceUrl === "https://himalayas.app" || data.sourceUrl === "https://www.adzuna.com/"
+        ? data.sourceUrl
+        : "https://himalayas.app";
+      jobs = Array.isArray(data.jobs) ? data.jobs.map(job => ({...job, source:job.source || data.provider, sourceUrl})) : [];
+      const sourceLink = jobSourceNotice.querySelector("a");
+      sourceLink.href = sourceUrl;
+      sourceLink.textContent = data.provider || "Himalayas";
+      jobSourceNotice.classList.toggle("d-none", !data.provider || showingSaved || showingApplications);
       render(jobs);
-      resultsCount.textContent = jobs.length ? `Showing ${jobs.length} live opening${jobs.length > 1 ? "s" : ""}` : "No live jobs found";
     } catch (error) {
       jobs = [];
-      grid.innerHTML = `<div class="job-api-state"><i class="bi bi-cloud-slash"></i><h4>Live job search isn't configured yet</h4><p>${escapeHtml(error.message)}</p><small>Once the job provider credentials are configured on the PHP server, live listings will appear here.</small></div>`;
+      jobSourceNotice.classList.add("d-none");
+      const message = error instanceof TypeError
+        ? "Could not reach Elevate's jobs service. Check that the Python backend is running, then retry."
+        : error.message || "Live listings could not be loaded. Please retry.";
+      grid.innerHTML = `<div class="job-api-state"><i class="bi bi-cloud-slash"></i><h4>Unable to load live listings</h4><p>${escapeHtml(message)}</p><button class="btn btn-outline-primary btn-sm retry-jobs-btn" type="button"><i class="bi bi-arrow-clockwise"></i> Retry</button></div>`;
+      grid.querySelector(".retry-jobs-btn").addEventListener("click", loadJobs);
       resultsCount.textContent = "Live job search unavailable";
-      noResults.classList.add("hidden");
+      noResults.classList.add("d-none");
     } finally { loadingJobs = false; updatePlatformLinks(kw.toLowerCase(), loc); }
   }
 
@@ -300,11 +318,13 @@
   });
   savedToggle.addEventListener("click", () => {
     showingSaved = !showingSaved; showingApplications = false;
+    jobSourceNotice.classList.toggle("d-none", !jobs.some(job => job.source) || showingSaved);
     savedToggle.classList.toggle("active", showingSaved); trackerToggle.classList.remove("active");
     render(showingSaved ? savedJobs : jobs);
   });
   trackerToggle.addEventListener("click", () => {
     showingApplications = !showingApplications; showingSaved = false;
+    jobSourceNotice.classList.toggle("d-none", !jobs.some(job => job.source) || showingApplications);
     trackerToggle.classList.toggle("active", showingApplications); savedToggle.classList.remove("active");
     render(showingApplications ? applications : jobs);
   });

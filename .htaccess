@@ -1,5 +1,9 @@
 Options -Indexes
 
+<IfModule mod_setenvif.c>
+  SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+</IfModule>
+
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"

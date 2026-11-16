@@ -93,9 +93,9 @@ if ($path === '/health' && $method === 'GET') {
 
 if ($path === '/profile' && in_array($method, ['GET','PUT'], true)) {
     $user = require_auth();
-    // Keep profile data separate from authentication credentials while allowing
-    // the app to work on an existing local database before the updated SQL is imported.
-    db()->exec("CREATE TABLE IF NOT EXISTS profiles (user_id INT UNSIGNED PRIMARY KEY, phone VARCHAR(40) NULL, location VARCHAR(160) NULL, headline VARCHAR(180) NULL, bio TEXT NULL, website VARCHAR(255) NULL, linkedin VARCHAR(255) NULL, skills TEXT NULL, preferences TEXT NULL, updated_at DATETIME NOT NULL, CONSTRAINT fk_profiles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB");
+    if (ELEVATE_ENV !== 'production') {
+        db()->exec("CREATE TABLE IF NOT EXISTS profiles (user_id INT UNSIGNED PRIMARY KEY, phone VARCHAR(40) NULL, location VARCHAR(160) NULL, headline VARCHAR(180) NULL, bio TEXT NULL, website VARCHAR(255) NULL, linkedin VARCHAR(255) NULL, skills TEXT NULL, preferences TEXT NULL, updated_at DATETIME NOT NULL, CONSTRAINT fk_profiles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB");
+    }
     if ($method === 'GET') {
         $stmt = db()->prepare('SELECT phone,location,headline,bio,website,linkedin,skills,preferences,updated_at FROM profiles WHERE user_id=? LIMIT 1');
         $stmt->execute([$user['id']]);
@@ -156,21 +156,199 @@ if ($path === '/copilot' && $method === 'POST') {
     $st=db()->prepare('SELECT data FROM career_results WHERE user_id=? LIMIT 1'); $st->execute([$uid]); if($r=$st->fetch()) $context['career']=json_decode($r['data'],true)?:null;
     $openaiKey=trim((string)(getenv('OPENAI_API_KEY') ?: OPENAI_API_KEY));
     $reply='';
+    $replyMode='guided';
     if($openaiKey!=='' && function_exists('curl_init')) {
         $prompt="You are Elevate Career Copilot. Give concise, practical career guidance using ONLY the supplied context. Never invent experience, employers, achievements, skills, dates, education, or job facts. If context is missing, say so. Prioritize 3-5 actionable next steps. The user asks: ".$message."\nCONTEXT:\n".json_encode($context,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-        $ch=curl_init('https://api.openai.com/v1/responses'); curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>['Content-Type: application/json','Authorization: Bearer '.$openaiKey],CURLOPT_POSTFIELDS=>json_encode(['model'=>OPENAI_MODEL,'input'=>$prompt,'max_output_tokens'=>900]),CURLOPT_TIMEOUT=>45]); $raw=curl_exec($ch); $err=curl_error($ch); $status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
+        $ch=curl_init('https://api.openai.com/v1/responses'); curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>['Content-Type: application/json','Authorization: Bearer '.$openaiKey],CURLOPT_POSTFIELDS=>json_encode(['model'=>OPENAI_MODEL,'input'=>$prompt,'max_output_tokens'=>900]),CURLOPT_CONNECTTIMEOUT=>10,CURLOPT_TIMEOUT=>45]); $raw=curl_exec($ch); $err=curl_error($ch); $status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
         if($raw!==false && $status>=200 && $status<300){$decoded=json_decode($raw,true);$reply=trim((string)($decoded['output_text']??''));if($reply===''&&isset($decoded['output'])&&is_array($decoded['output']))foreach($decoded['output'] as $out)foreach(($out['content']??[]) as $content)if(isset($content['text']))$reply.=(string)$content['text'];$reply=trim($reply);}
+        if($reply!=='') {
+            $replyMode='ai';
+        } else {
+            error_log('Copilot AI provider request failed: HTTP ' . $status . '; ' . ($err ?: 'empty or invalid provider response'));
+        }
     }
     if($reply==='') {
-        $p=$context['profile']; $r=$context['resume']; $apps=$context['applications'];
-        $profileReady=$p && !empty($p['headline']) && !empty($p['skills']); $resumeReady=$r && !empty($r['fullName']) && !empty($r['summary']) && !empty($r['skills']);
-        $parts=[]; if(!$profileReady)$parts[]='Complete your profile with a strong headline, target role, skills and preferences.'; if(!$resumeReady)$parts[]='Finish your resume summary, experience and skills so it is ready for ATS review.'; if(count($apps)===0)$parts[]='Start an application pipeline by saving and applying to a small set of strong-fit roles.'; else $parts[]='Review your active applications and follow up on any role that needs attention.'; $reply="Based on your current Elevate workspace, here are the highest-impact moves:\n\n• ".implode("\n• ",$parts)."\n\nConnect an OpenAI API key on the server to unlock deeper personalized Copilot conversations.";
+        $question=mb_strtolower($message);
+        $profile=$context['profile'] ?? [];
+        $resume=$context['resume'] ?? [];
+        $skills=array_values(array_unique(array_filter(array_map(
+            static fn($skill): string => trim(is_array($skill) ? (string)($skill['name'] ?? $skill['skill'] ?? '') : (string)$skill),
+            array_merge(
+                is_array($profile['skills'] ?? null) ? $profile['skills'] : [],
+                is_array($resume['skills'] ?? null) ? $resume['skills'] : []
+            )
+        ))));
+        $role=trim((string)($profile['preferences']['role'] ?? $profile['headline'] ?? $resume['jobTitle'] ?? ''));
+        $hasResume=!empty($context['resume']);
+        $hasProfile=!empty($context['profile']);
+        $resumeExperience=is_array($resume['experience'] ?? null) ? $resume['experience'] : [];
+        $resumeEducation=is_array($resume['education'] ?? null) ? $resume['education'] : [];
+        $applications=$context['applications'];
+        $activeApplications=array_values(array_filter($applications,static fn($application): bool => !in_array((string)($application['status'] ?? 'Applied'),['Rejected','Offer'],true)));
+        $profileGaps=[];
+        if(!$hasProfile || empty($profile['headline'])) $profileGaps[]='Set a clear target role in your Profile.';
+        if(!$skills) $profileGaps[]='Add skills you can demonstrate to your Profile and resume.';
+        $resumeGaps=[];
+        if(!$hasResume || empty($resume['summary'])) $resumeGaps[]='Write and save a short resume summary targeted to your next role.';
+        if(!$resumeExperience && empty($resume['projects'])) $resumeGaps[]='Add experience, internships, or relevant projects with specific outcomes.';
+        if(!$resumeEducation) $resumeGaps[]='Complete the education section if it applies to your background.';
+        $asksToDownloadResume=preg_match('/\b(download|save|export|print|get)\b/u',$question)
+            && preg_match('/\b(resume|cv|curriculum vitae)\b/u',$question);
+        $asksForReadiness=preg_match('/\b(readiness|ready|chances|hired|hire|high.?impact|improvement)\b/u',$question);
+        $asksAboutFeatures=preg_match('/\b(what|which|how|can)\b/u',$question)
+            && preg_match('/\b(you|copilot|features|feature|help|do)\b/u',$question);
+        $asksForAtsHelp=preg_match('/\b(ats|applicant tracking|keywords|keyword|screening)\b/u',$question);
+        $asksForResumeReview=preg_match('/\b(resume|cv|curriculum vitae)\b/u',$question)
+            && preg_match('/\b(review|improve|fix|better|stronger|check|feedback|readiness)\b/u',$question);
+        $asksForJobDirection=preg_match('/\b(job|jobs|role|roles|career|direction|search|opportunit)\b/u',$question)
+            && preg_match('/\b(find|look|search|target|suitable|right|recommend|apply|focus|prioriti[sz]e)\b/u',$question);
+        $asksForPipeline=preg_match('/\b(application|applications|pipeline|interview|offer|follow.?up)\b/u',$question);
+        $asksForPlan=preg_match('/\b(week|weekly|plan|next step|focus|priority|prioritise|prioritize)\b/u',$question);
+        if($asksToDownloadResume){
+            $reply="To download your resume as a PDF:\n\n1. Open Resume Builder from the top menu.\n2. Complete your resume and enter your name in Personal Details; a name is required for the download.\n3. Click Download PDF below the preview. The PDF will be saved to your device.\n\nUse Export instead if you want a JSON backup of your resume data. PDF generation requires the PDF tools to load, so check your internet connection if the download does not start.";
+        } elseif($asksForReadiness){
+            $steps=array_merge($profileGaps,$resumeGaps);
+            if(!$activeApplications) $steps[]='Search live openings that fit your target role and track applications after you apply.';
+            else $steps[]='Review active applications and follow up when the employer’s response window has passed.';
+            if(!$steps) $steps[]='Your saved profile and resume cover the main foundations. Tailor your resume to each suitable live opening and track your follow-ups.';
+            $reply="Here are the highest-impact improvements based on the profile, resume, and application information saved to your account:\n\n• ".implode("\n• ",array_slice($steps,0,4));
+        } elseif($asksAboutFeatures){
+            $reply="I can help you improve your resume, understand ATS keywords, choose job-search priorities, and plan follow-ups for applications. I can use the profile, resume and application information saved to your Elevate account. Ask me something specific, such as “How can I improve my resume for ATS?” or “What should I focus on this week?”";
+        } elseif($asksForAtsHelp){
+            $reply="For a stronger ATS-friendly resume, use a simple layout, standard section headings, and keywords from the actual job description. Support each important skill with an honest example from your experience; do not add keywords or qualifications you do not have.\n\n";
+            if(!$hasResume) $reply.="I could not find a saved resume in your account yet. Add one in Resume Builder, then ask me to review it.";
+            else {
+                $reply.="Based on the account data I can access, your resume";
+                $gaps=[];
+                if(empty($resume['summary'])) $gaps[]='needs a concise role-targeted summary';
+                if(!$skills) $gaps[]='does not yet list skills';
+                if(!$resumeExperience) $gaps[]='does not yet list experience or projects';
+                if(!$resumeEducation) $gaps[]='does not yet list education';
+                $reply.=$gaps ? ' '.$gaps[0].(count($gaps)>1 ? ', and '.$gaps[1] : '').'.' : ' includes a summary, skills, experience and education; tailor those sections to each role.';
+                if($skills) $reply.="\n\nSkills currently listed: ".implode(', ',array_slice($skills,0,10)).'.';
+            }
+        } elseif($asksForResumeReview){
+            if(!$hasResume) {
+                $reply="I cannot see a resume saved to your account yet, so I cannot review its contents. Open Resume Builder, complete your details and save the resume, then ask me for feedback again.";
+            } else {
+                $gaps=[];
+                if(empty($resume['fullName'])) $gaps[]='add your name and contact details';
+                if(empty($resume['summary'])) $gaps[]='write a short summary targeted to your desired role';
+                if(!$skills) $gaps[]='add relevant skills that you can demonstrate';
+                if(!$resumeExperience) $gaps[]='include experience, internships, or relevant projects with specific outcomes';
+                if(!$resumeEducation) $gaps[]='complete your education section';
+                if($gaps) {
+                    $reply="I checked the resume data saved to your Elevate account. The clearest next improvements are:\n\n• ".implode("\n• ",array_slice($gaps,0,4));
+                } else {
+                    $reply="Your saved resume has its main sections in place. To strengthen it further, target the summary and first experience bullets to one real job description, add measurable outcomes where you can support them, and remove details that do not help with that role.";
+                }
+                if($role!=='') $reply.="\n\nYour current target appears to be “".$role."”.";
+            }
+        } elseif($asksForJobDirection){
+            $reply=$role!=='' ? "Your saved profile/resume points toward “".$role."”." : "I could not find a target role in your saved profile or resume yet.";
+            if($skills) $reply.=" Skills listed in your account include ".implode(', ',array_slice($skills,0,6)).'.';
+            $reply.="\n\nUse Jobs to search live openings, starting with ".($role!=='' ? $role : ($skills ? implode(' ',array_slice($skills,0,2)).' roles' : 'a role that matches your strongest skills')).". Check each posting’s location and experience requirements, then track applications you actually submit.";
+        } elseif($asksForPipeline){
+            $interviews=count(array_filter($applications,static fn($application): bool => (string)($application['status'] ?? '')==='Interview'));
+            $offers=count(array_filter($applications,static fn($application): bool => (string)($application['status'] ?? '')==='Offer'));
+            $reply="Your account currently has ".count($applications)." tracked application".(count($applications)===1?'':'s').", ".$interviews." marked for interview, and ".$offers." marked as offers.";
+            $reply.=$activeApplications
+                ? "\n\nNext, open Applications and follow up on active roles where the employer’s stated response window has passed. Keep each follow-up short, specific, and polite."
+                : "\n\nOpen Jobs, find a suitable live opening, and track it after you apply so your pipeline stays current.";
+        } elseif($asksForPlan){
+            $steps=[];
+            if(!$hasProfile || empty($profile['headline']) || !$skills) $steps[]='Complete your profile headline, target role, and skills.';
+            if(!$hasResume || empty($resume['summary'])) $steps[]='Finish and save a concise, role-focused resume summary.';
+            if(!$activeApplications) $steps[]='Choose a few relevant live listings and apply only where you meet the core requirements.';
+            else $steps[]='Review active applications and send timely follow-ups where appropriate.';
+            $steps[]='Use the exact requirements in each posting to tailor your resume honestly.';
+            $reply="Here is a practical plan for this week:\n\n• ".implode("\n• ",array_slice($steps,0,4));
+        } else {
+            $steps=[];
+            if(!$hasProfile) $steps[]='Add a target role and skills to your Profile.';
+            if(!$hasResume) $steps[]='Create and save a resume in Resume Builder.';
+            if(!$activeApplications) $steps[]='Search live openings and track applications after you apply.';
+            else $steps[]='Review active applications and note any follow-ups due.';
+            $reply="I’m in guided mode right now, so I can still help with your saved Elevate career data without an external AI connection. ".($steps ? "A useful next step is to ".$steps[0] : "Your profile and resume are available for focused career guidance.")."\n\nTell me whether you want help with your resume, ATS keywords, job search, or application follow-ups.";
+        }
+        $reply="Guided Copilot (AI provider not configured):\n\n".$reply;
     }
-    json_response(['ok'=>true,'reply'=>$reply]);
+    json_response(['ok'=>true,'mode'=>$replyMode,'reply'=>$reply]);
+}
+
+if ($path === '/auth/forgot-password' && $method === 'POST') {
+    rate_limit('forgot-password', 20, 900);
+    $email = clean_email($data['email'] ?? '');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) json_response(['error'=>'Please enter a valid email address.'],400);
+
+    require_once __DIR__ . '/password_reset_mailer.php';
+    if (!password_reset_mailer_configured()) {
+        json_response(['error'=>'Password reset email is not configured. Ask the server administrator to set the SMTP environment variables and run composer install.'],503);
+    }
+
+    $stmt = db()->prepare('SELECT id,name,email FROM users WHERE email=? LIMIT 1');
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
+    if (!$user) json_response(['ok'=>true,'message'=>'If that email belongs to an Elevate account, password reset instructions will arrive shortly.']);
+
+    $token = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);
+    $createdAt = date('Y-m-d H:i:s');
+    $expiresAt = date('Y-m-d H:i:s', time() + 3600);
+    $stmt = db()->prepare(
+        'INSERT INTO password_resets(user_id,token_hash,expires_at,created_at) VALUES(?,?,?,?) ' .
+        'ON DUPLICATE KEY UPDATE token_hash=VALUES(token_hash),expires_at=VALUES(expires_at),created_at=VALUES(created_at)'
+    );
+    $stmt->execute([(int)$user['id'],$tokenHash,$expiresAt,$createdAt]);
+    $resetUrl = ELEVATE_BASE_URL . '/reset-password.html?token=' . rawurlencode($token);
+
+    try {
+        send_password_reset_email((string)$user['email'],(string)$user['name'],$resetUrl);
+    } catch (Throwable $e) {
+        $stmt = db()->prepare('DELETE FROM password_resets WHERE user_id=? AND token_hash=?');
+        $stmt->execute([(int)$user['id'],$tokenHash]);
+        error_log('Password reset email delivery failed: ' . $e->getMessage());
+        json_response(['error'=>'The reset email could not be sent. Check the SMTP server settings and try again.'],502);
+    }
+
+    json_response(['ok'=>true,'message'=>'If that email belongs to an Elevate account, password reset instructions will arrive shortly.']);
+}
+
+if ($path === '/auth/reset-password' && $method === 'POST') {
+    rate_limit('reset-password', 20, 900);
+    $token = trim((string)($data['token'] ?? ''));
+    $password = (string)($data['password'] ?? '');
+    if (!preg_match('/^[a-f0-9]{64}$/i', $token)) json_response(['error'=>'This reset link is invalid or has expired. Request a new one.'],400);
+    if (strlen($password) < 8) json_response(['error'=>'Password must be at least 8 characters.'],400);
+
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare('SELECT user_id FROM password_resets WHERE token_hash=? AND expires_at>? LIMIT 1 FOR UPDATE');
+        $stmt->execute([hash('sha256',$token),date('Y-m-d H:i:s')]);
+        $userId = $stmt->fetchColumn();
+        if (!$userId) {
+            $pdo->rollBack();
+            json_response(['error'=>'This reset link is invalid or has expired. Request a new one.'],400);
+        }
+
+        $stmt = $pdo->prepare('UPDATE users SET password_hash=? WHERE id=?');
+        $stmt->execute([password_hash($password,PASSWORD_DEFAULT),(int)$userId]);
+        $stmt = $pdo->prepare('DELETE FROM password_resets WHERE user_id=?');
+        $stmt->execute([(int)$userId]);
+        $stmt = $pdo->prepare('DELETE FROM auth_sessions WHERE user_id=?');
+        $stmt->execute([(int)$userId]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+
+    json_response(['ok'=>true,'message'=>'Your password has been reset. You can now sign in.']);
 }
 
 if ($path === '/auth/register' && $method === 'POST') {
-    rate_limit('register', 5, 900);
+    rate_limit('register', 20, 900);
     $name = trim((string)($data['name'] ?? ''));
     $email = clean_email($data['email'] ?? '');
     $password = (string)($data['password'] ?? '');
@@ -188,8 +366,17 @@ if ($path === '/auth/register' && $method === 'POST') {
     }
 }
 
+if ($path === '/auth/logout' && $method === 'POST') {
+    $user = require_auth();
+    if ($user['session_id'] !== '') {
+        $stmt = db()->prepare('DELETE FROM auth_sessions WHERE session_id=? AND user_id=?');
+        $stmt->execute([hash('sha256',$user['session_id']),$user['id']]);
+    }
+    json_response(['ok'=>true]);
+}
+
 if ($path === '/auth/login' && $method === 'POST') {
-    rate_limit('login', 12, 900);
+    rate_limit('login', 30, 900);
     $email = clean_email($data['email'] ?? '');
     $password = (string)($data['password'] ?? '');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 1) json_response(['error'=>'Incorrect email or password.'],401);
@@ -208,7 +395,110 @@ if ($path === '/job-search' && $method === 'GET') {
     $appId = trim((string)(getenv('ADZUNA_APP_ID') ?: ADZUNA_APP_ID));
     $appKey = trim((string)(getenv('ADZUNA_APP_KEY') ?: ADZUNA_APP_KEY));
     if ($appId === '' || $appKey === '') {
-        json_response(['error'=>'Real job search is not configured yet. Set ADZUNA_APP_ID and ADZUNA_APP_KEY on the PHP server.','configured'=>false],503);
+        if (!function_exists('curl_init')) json_response(['error'=>'PHP cURL is required for live job search.'],500);
+
+        $what = trim((string)($_GET['what'] ?? ''));
+        $where = strtolower(trim((string)($_GET['where'] ?? '')));
+        $type = strtolower(trim((string)($_GET['type'] ?? '')));
+        $page = max(1, min(50, (int)($_GET['page'] ?? 1)));
+        $limit = max(1, min(20, (int)($_GET['limit'] ?? 20)));
+        $query = $what;
+        $params = ['sort'=>'recent', 'page'=>$page];
+
+        if ($where === 'remote') {
+            $params['worldwide'] = 'true';
+        } elseif ($where !== '') {
+            // The provider filters remote roles by country, not by city.
+            $params['country'] = 'IN';
+        }
+        if ($type !== '') {
+            $employmentTypes = [
+                'full-time'=>'Full Time',
+                'part-time'=>'Part Time',
+                'internship'=>'Intern',
+            ];
+            if (isset($employmentTypes[$type])) $params['employment_type'] = $employmentTypes[$type];
+        }
+        if ($query !== '') $params['q'] = $query;
+        $params['limit'] = $limit;
+
+        $ch = curl_init('https://himalayas.app/jobs/api/search?' . http_build_query($params));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER=>true,
+            CURLOPT_HTTPHEADER=>['Accept: application/json'],
+            CURLOPT_CONNECTTIMEOUT=>8,
+            CURLOPT_TIMEOUT=>20,
+            CURLOPT_USERAGENT=>'ElevateCareerPlatform/1.0 (+https://himalayas.app/api)',
+        ]);
+        $raw = curl_exec($ch);
+        $http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        $decoded = is_string($raw) ? json_decode($raw, true) : null;
+        if ($raw === false || $http < 200 || $http >= 300 || !is_array($decoded) || !is_array($decoded['jobs'] ?? null)) {
+            error_log('Himalayas job search failed: HTTP ' . $http . '; ' . ($curlError ?: 'invalid provider response'));
+            json_response(['error'=>'Live job listings are temporarily unavailable. Please try again shortly.'],502);
+        }
+
+        $items = [];
+        foreach ($decoded['jobs'] as $job) {
+            $title = trim((string)($job['title'] ?? ''));
+            if ($title === '') continue;
+            $applicationUrl = trim((string)($job['applicationLink'] ?? $job['guid'] ?? ''));
+            $applicationHost = strtolower((string)parse_url($applicationUrl, PHP_URL_HOST));
+            if (!filter_var($applicationUrl, FILTER_VALIDATE_URL) || !in_array($applicationHost, ['himalayas.app','www.himalayas.app'], true)) {
+                $applicationUrl = 'https://himalayas.app/jobs';
+            }
+            $employmentType = strtolower(trim((string)($job['employmentType'] ?? '')));
+            $jobType = match ($employmentType) {
+                'full time'=>'full-time',
+                'part time'=>'part-time',
+                'intern'=>'internship',
+                default=>'other',
+            };
+            $locations = array_values(array_filter(array_map(
+                static fn($location): string => trim((string)$location),
+                is_array($job['locationRestrictions'] ?? null) ? $job['locationRestrictions'] : []
+            )));
+            $location = $locations ? implode(', ', $locations) : 'Remote — Worldwide';
+            if (isset($job['minSalary']) || isset($job['maxSalary'])) {
+                $currency = strtoupper(trim((string)($job['currency'] ?? '')));
+                $period = strtolower(trim((string)($job['salaryPeriod'] ?? 'annual')));
+                $salaryParts = [];
+                foreach (['minSalary','maxSalary'] as $salaryField) {
+                    if (isset($job[$salaryField]) && is_numeric($job[$salaryField])) {
+                        $salaryParts[] = ($currency !== '' ? $currency . ' ' : '') . number_format((float)$job[$salaryField], 0);
+                    }
+                }
+                $salary = implode('–', $salaryParts);
+                if ($salary !== '') $salary .= ' / ' . $period;
+            } else {
+                $salary = 'Not listed';
+            }
+            $publishedAt = isset($job['pubDate']) && is_numeric($job['pubDate'])
+                ? gmdate('c', (int)$job['pubDate'])
+                : '';
+            $items[] = [
+                'id'=>(string)($job['guid'] ?? sha1($title . '|' . ($job['companyName'] ?? ''))),
+                'title'=>$title,
+                'company'=>trim((string)($job['companyName'] ?? 'Company not listed')),
+                'location'=>$location,
+                'type'=>$jobType,
+                'salary'=>$salary,
+                'posted'=>$publishedAt,
+                'description'=>trim(html_entity_decode(strip_tags((string)($job['description'] ?? $job['excerpt'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8')),
+                'url'=>$applicationUrl,
+                'source'=>'Himalayas',
+            ];
+        }
+        json_response([
+            'configured'=>true,
+            'provider'=>'Himalayas',
+            'sourceUrl'=>'https://himalayas.app',
+            'jobs'=>$items,
+            'count'=>count($items),
+            'total'=>(int)($decoded['totalCount'] ?? count($items)),
+        ]);
     }
     if (!function_exists('curl_init')) json_response(['error'=>'PHP cURL is required for job search.'],500);
 
@@ -226,9 +516,9 @@ if ($path === '/job-search' && $method === 'GET') {
         'content-type' => 'application/json',
         'sort_by' => 'date',
     ];
+    if (strtolower($where) === 'remote') $what = trim($what . ' remote');
     if ($what !== '') $params['what'] = $what;
     if ($where !== '' && strtolower($where) !== 'remote') $params['where'] = $where;
-    if (strtolower($where) === 'remote') $what = trim($what . ' remote');
     if ($type === 'full-time') $params['full_time'] = 1;
     if ($type === 'part-time') $params['part_time'] = 1;
 
@@ -276,7 +566,7 @@ if ($path === '/job-search' && $method === 'GET') {
             'source'=>'Adzuna'
         ];
     }
-    json_response(['configured'=>true,'jobs'=>$items,'count'=>count($items),'total'=>(int)($decoded['count'] ?? count($items))]);
+    json_response(['configured'=>true,'provider'=>'Adzuna','sourceUrl'=>'https://www.adzuna.com/','jobs'=>$items,'count'=>count($items),'total'=>(int)($decoded['count'] ?? count($items))]);
 }
 
 
@@ -354,18 +644,28 @@ if ($path === '/career-plan' && $method === 'POST') {
     $profile = is_array($ctx['profile'] ?? null) ? $ctx['profile'] : [];
     $resume = is_array($ctx['resume'] ?? null) ? $ctx['resume'] : [];
     $applications = is_array($ctx['applications'] ?? null) ? array_slice($ctx['applications'], 0, 30) : [];
+    $careerResult = is_array($ctx['careerResult'] ?? null) ? $ctx['careerResult'] : [];
     $plan = ['priorities'=>[], 'skills'=>[], 'weeks'=>[], 'strategy'=>[], 'notes'=>[]];
     $key = trim((string)(getenv('OPENAI_API_KEY') ?: OPENAI_API_KEY));
     if ($key !== '' && function_exists('curl_init')) {
-        $prompt = "Create a personalized 30-day career execution plan. Return ONLY valid JSON with keys priorities, skills, weeks, strategy, notes. priorities: array of 3-5 objects {title,detail}; skills: array of up to 6 objects {name,reason,level} where level is 0-100; weeks: exactly 4 objects {title,text}; strategy: array of 3-5 strings; notes: array of 2-4 strings. Use only supplied facts. Never invent employers, credentials, achievements, dates, metrics or skills. Focus on actionable career progress.\nPROFILE:\n" . mb_substr(json_encode($profile, JSON_UNESCAPED_SLASHES),0,7000) . "\nRESUME:\n" . mb_substr(json_encode($resume, JSON_UNESCAPED_SLASHES),0,12000) . "\nAPPLICATIONS:\n" . mb_substr(json_encode($applications, JSON_UNESCAPED_SLASHES),0,10000);
+        $prompt = "Create a personalized 30-day career execution plan. Return ONLY valid JSON with keys priorities, skills, weeks, strategy, notes. priorities: array of 3-5 objects {title,detail}; skills: array of up to 6 objects {name,reason,level} where level is 0-100; weeks: exactly 4 objects {title,text}; strategy: array of 3-5 strings; notes: array of 2-4 strings. Use only supplied facts. Never invent employers, credentials, achievements, dates, metrics or skills. Treat the career assessment as a starting point and focus on actionable career progress.\nCAREER ASSESSMENT:\n" . mb_substr(json_encode($careerResult, JSON_UNESCAPED_SLASHES),0,5000) . "\nPROFILE:\n" . mb_substr(json_encode($profile, JSON_UNESCAPED_SLASHES),0,7000) . "\nRESUME:\n" . mb_substr(json_encode($resume, JSON_UNESCAPED_SLASHES),0,12000) . "\nAPPLICATIONS:\n" . mb_substr(json_encode($applications, JSON_UNESCAPED_SLASHES),0,10000);
         $ch=curl_init('https://api.openai.com/v1/responses');
         curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>['Content-Type: application/json','Authorization: Bearer '.$key],CURLOPT_POSTFIELDS=>json_encode(['model'=>OPENAI_MODEL,'input'=>$prompt,'max_output_tokens'=>1000]),CURLOPT_TIMEOUT=>45]);
         $raw=curl_exec($ch); $http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
         if($raw!==false && $http>=200 && $http<300){$out=json_decode($raw,true);$text=trim((string)($out['output_text']??''));$decoded=json_decode($text,true);if(is_array($decoded)){$plan=$decoded;$plan['ai']=true;}}
     }
     if (!$plan['priorities']) {
-        $role = trim((string)($profile['preferences']['role'] ?? $resume['jobTitle'] ?? 'your target role'));
-        $plan=['priorities'=>[['title'=>'Strengthen your core career assets','detail'=>'Keep your profile and resume complete, accurate and targeted to '.$role.'.'],['title'=>'Build a high-fit application pipeline','detail'=>'Focus on a manageable set of roles where your current experience genuinely matches.'],['title'=>'Improve interview conversion','detail'=>'Prepare concise examples that connect your real experience to the target role.']], 'skills'=>[['name'=>'Role-specific keywords','reason'=>'Align truthful resume language with target job descriptions.','level'=>55],['name'=>'Achievement storytelling','reason'=>'Make existing experience easier for recruiters to understand.','level'=>50],['name'=>'Interview communication','reason'=>'Practice clear, structured answers for common interview themes.','level'=>45]], 'weeks'=>[['title'=>'Week 1','text'=>'Complete your profile and polish your master resume.'],['title'=>'Week 2','text'=>'Target high-fit jobs and tailor priority applications.'],['title'=>'Week 3','text'=>'Practice interviews and strengthen the biggest skill gap.'],['title'=>'Week 4','text'=>'Review outcomes, follow up and refine your strategy.']], 'strategy'=>['Prioritize fit over application volume.','Tailor truthful keywords to each priority role.','Review your funnel weekly and adjust based on outcomes.'],'notes'=>['This plan uses only information available in Elevate.','AI must not be used to invent qualifications or achievements.'],'ai'=>false];
+        $assessmentRoles = is_array($careerResult['roles'] ?? null) ? $careerResult['roles'] : [];
+        $role = trim((string)($assessmentRoles[0] ?? $profile['preferences']['role'] ?? $resume['jobTitle'] ?? 'your target role'));
+        $assessmentSkills = is_array($careerResult['skills'] ?? null) ? array_slice(array_values(array_filter($careerResult['skills'], 'is_string')), 0, 3) : [];
+        $skills = [];
+        foreach ($assessmentSkills as $index => $skill) {
+            $skills[] = ['name'=>$skill,'reason'=>'Build this skill to support your '.$role.' career direction.','level'=>45 + ($index * 10)];
+        }
+        if (!$skills) {
+            $skills=[['name'=>'Role-specific keywords','reason'=>'Align truthful resume language with target job descriptions.','level'=>55],['name'=>'Achievement storytelling','reason'=>'Make existing experience easier for recruiters to understand.','level'=>50],['name'=>'Interview communication','reason'=>'Practice clear, structured answers for common interview themes.','level'=>45]];
+        }
+        $plan=['priorities'=>[['title'=>'Build toward '.$role,'detail'=>'Align your profile, resume and next steps with your career direction.'],['title'=>'Build a high-fit application pipeline','detail'=>'Focus on a manageable set of roles where your current experience genuinely matches.'],['title'=>'Improve interview conversion','detail'=>'Prepare concise examples that connect your real experience to the target role.']], 'skills'=>$skills, 'weeks'=>[['title'=>'Week 1','text'=>'Review your career direction and polish your targeted profile and resume.'],['title'=>'Week 2','text'=>'Target high-fit jobs and tailor priority applications.'],['title'=>'Week 3','text'=>'Practice interviews and strengthen a role-related skill.'],['title'=>'Week 4','text'=>'Review outcomes, follow up and refine your strategy.']], 'strategy'=>['Prioritize fit over application volume.','Tailor truthful keywords to each priority role.','Review your funnel weekly and adjust based on outcomes.'],'notes'=>['This plan uses only information available in Elevate.','AI must not be used to invent qualifications or achievements.'],'ai'=>false];
     }
     json_response(['ok'=>true,'ai'=>(bool)($plan['ai']??false),'plan'=>$plan]);
 }

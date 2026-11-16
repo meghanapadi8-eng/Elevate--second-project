@@ -33,6 +33,7 @@
 }
 .job-type-tag{ font-size:11.5px; font-weight:800; padding:5px 10px; border-radius:var(--r-pill); background:var(--success-bg); color:var(--success); white-space:nowrap; }
 .job-type-tag.internship{ background:var(--warn-bg); color:var(--warn); }
+.job-type-tag.demo-tag{background:#e8f2ff;color:#24558a}
 .job-card h4{ font-size:16px; margin-top:16px; }
 .job-card-company{ color:var(--muted); font-size:13.5px; font-weight:600; margin-top:4px; }
 .job-card-meta{ display:flex; gap:14px; margin-top:14px; flex-wrap:wrap; }

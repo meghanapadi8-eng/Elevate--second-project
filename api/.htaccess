@@ -1,25 +1,5 @@
 Options -Indexes
-RewriteEngine On
 
-<IfModule mod_headers.c>
-  Header always set X-Content-Type-Options "nosniff"
-  Header always set X-Frame-Options "SAMEORIGIN"
-  Header always set Referrer-Policy "strict-origin-when-cross-origin"
-  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
-  Header always set Cache-Control "no-store"
-</IfModule>
-
-<FilesMatch "^(auth\.php|config\.php|database\.php)$">
+<FilesMatch "\.php$">
   Require all denied
-</FilesMatch>
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ index.php [QSA,L]
-
-# Never serve server-side source/config files.
-<FilesMatch "\.(php|sql|log|env)$">
-  <If "%{REQUEST_URI} =~ m#/(config|database|auth)\.php$#">
-    Require all denied
-  </If>
 </FilesMatch>

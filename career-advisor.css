@@ -55,3 +55,4 @@
 /* Professional page refinement */
 .advisor-card,.side-card{box-shadow:var(--shadow-sm);}
 .option-btn{transition:.2s ease;}.option-btn:hover{transform:translateY(-2px);}
+.plan-hero .hero-copy h2{font-size:clamp(2rem,4vw,3.5rem);font-weight:800;letter-spacing:-.05em;margin:16px 0;}

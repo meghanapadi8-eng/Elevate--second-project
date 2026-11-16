@@ -208,7 +208,7 @@ ${name}`;
 })();
 
 
-/* Elevate cloud letter sync: mirrors locally saved letters into PHP/MySQL for signed-in users. */
+/* Elevate cloud letter sync: mirrors locally saved letters into SQLite for signed-in users. */
 (() => {
   const originalSet = localStorage.setItem.bind(localStorage);
   const sync = async () => {

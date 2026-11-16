@@ -1,1 +1,54 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Elevate • System Status</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"><link href="professional.css" rel="stylesheet"></head><body><main class="container py-5" style="max-width:900px"><a href="index.html" class="btn btn-outline-secondary mb-4"><i class="bi bi-arrow-left me-1"></i> Back to Elevate</a><div class="card border-0 shadow-sm"><div class="card-body p-4 p-md-5"><span class="badge text-bg-success mb-3">Production Readiness</span><h1 class="h2 fw-bold">Security & system status</h1><p class="text-secondary">A quick diagnostic for your local or hosted Elevate installation.</p><div id="status" class="alert alert-secondary">Checking API health…</div><div class="row g-3"><div class="col-md-4"><div class="p-3 bg-body-tertiary rounded-3"><strong>Authentication</strong><div class="small text-secondary mt-1">JWT signing, password hashing and rate limits.</div></div></div><div class="col-md-4"><div class="p-3 bg-body-tertiary rounded-3"><strong>API protection</strong><div class="small text-secondary mt-1">Security headers, request limits and validation.</div></div></div><div class="col-md-4"><div class="p-3 bg-body-tertiary rounded-3"><strong>Database</strong><div class="small text-secondary mt-1">Prepared queries and user-scoped records.</div></div></div></div><hr class="my-4"><p class="small text-secondary mb-0">Before public deployment, set a strong <code>ELEVATE_JWT_SECRET</code>, database credentials, and your provider API keys in server environment variables.</p></div></div></main><script>fetch('api/index.php?route=%2Fhealth').then(r=>r.json()).then(d=>{const el=document.getElementById('status');el.className='alert '+(d.ok?'alert-success':'alert-danger');el.innerHTML=d.ok?'&#10003; Elevate API is reachable'+(d.database==='ok'?' and MySQL is connected.':'.'):'API is reachable but the database is unavailable.'}).catch(()=>{const el=document.getElementById('status');el.className='alert alert-danger';el.textContent='Cannot reach the PHP API. Start Apache/PHP and open Elevate through localhost.'});</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Elevate • System Status</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="professional.css" rel="stylesheet">
+</head>
+<body>
+  <main class="container py-5" style="max-width:900px">
+    <a href="index.html" class="btn btn-outline-secondary mb-4"><i class="bi bi-arrow-left me-1"></i> Back to Elevate</a>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4 p-md-5">
+        <span class="badge text-bg-primary mb-3">System Health Check</span>
+        <h1 class="h2 fw-bold">Security & system status</h1>
+        <p class="text-secondary">Checks whether this Elevate installation can reach its Python API and database.</p>
+        <div id="status" class="alert alert-secondary" role="status">Checking API health…</div>
+        <div class="alert alert-warning">
+          This is a connectivity check, not a production security audit or deployment certification.
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4"><div class="p-3 bg-body-tertiary rounded-3"><strong>Authentication</strong><div class="small text-secondary mt-1">JWT signing, password hashing and rate limits.</div></div></div>
+          <div class="col-md-4"><div class="p-3 bg-body-tertiary rounded-3"><strong>API protection</strong><div class="small text-secondary mt-1">Request limits, validation and protected routes.</div></div></div>
+          <div class="col-md-4"><div class="p-3 bg-body-tertiary rounded-3"><strong>Database</strong><div class="small text-secondary mt-1">Prepared queries and user-scoped records.</div></div></div>
+        </div>
+        <hr class="my-4">
+        <p class="small text-secondary mb-0">Before public deployment, configure <code>ELEVATE_ENV=production</code>, a strong <code>ELEVATE_JWT_SECRET</code>, HTTPS, and any required email or provider integrations on the server.</p>
+      </div>
+    </div>
+  </main>
+  <script src="js/auth.js"></script>
+  <script>
+    fetch(window.ElevateAuth.url('/health'))
+      .then(response => response.json())
+      .then(data => {
+        const status = document.getElementById('status');
+        if (data.ok && data.database === 'ok') {
+          status.className = 'alert alert-success';
+          status.textContent = 'API and database are reachable on this installation.';
+        } else {
+          status.className = 'alert alert-danger';
+          status.textContent = 'The API or database is unavailable. Check the server and database configuration.';
+        }
+      })
+      .catch(() => {
+        const status = document.getElementById('status');
+        status.className = 'alert alert-danger';
+        status.textContent = 'Cannot reach the Python API. Start the backend with the documented Uvicorn command.';
+      });
+  </script>
+</body>
+</html>
