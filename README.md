@@ -26,6 +26,10 @@ To preserve existing MySQL accounts and records, back up your MySQL database, se
 
 Job Search uses live listings from the Himalayas public jobs API when Adzuna credentials are not set. No API key is needed for this fallback. Set `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` to prefer Adzuna. Configure `OPENAI_API_KEY` and optionally `OPENAI_MODEL` for generative AI; Copilot and career planning retain guided responses when AI is not configured.
 
+## Static preview
+
+The GitHub Pages workflow publishes the project at `https://meghanapadi8-eng.github.io/Elevate--second-project/`. This is a static preview only: GitHub Pages does not run the FastAPI backend or SQLite database, so sign-in and server-synced features require a separately hosted API.
+
 ## Project structure
 
 ```text
