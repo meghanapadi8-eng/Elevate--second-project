@@ -69,7 +69,7 @@ Configure these environment variables in the Python process (never in frontend J
 - Optional integrations: `OPENAI_API_KEY`, `OPENAI_MODEL`, `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, and `ADZUNA_COUNTRY`
 - Password-reset email: `ELEVATE_BASE_URL`, `ELEVATE_SMTP_HOST`, `ELEVATE_SMTP_PORT`, `ELEVATE_SMTP_ENCRYPTION` (`tls` or `ssl`), `ELEVATE_SMTP_USERNAME`, `ELEVATE_SMTP_PASSWORD`, `ELEVATE_MAIL_FROM`, and optionally `ELEVATE_MAIL_FROM_NAME`
 
-Set the environment variables before starting Uvicorn. For local XAMPP, use `ELEVATE_BASE_URL=http://localhost/Elevate`; in production use your HTTPS site URL, set `ELEVATE_CORS_ORIGINS`, and change `API_BASE` in `js/auth.js` to the deployed Python API URL. Never commit SMTP/provider credentials. Password reset links are single-use and expire after 60 minutes. Back up the SQLite file regularly and use HTTPS in production. The old PHP files under `api/` are disabled by `.htaccess`; the frontend now talks to FastAPI on port 8000.
+Set the environment variables before starting Uvicorn. For local XAMPP, use `ELEVATE_BASE_URL=http://localhost/Elevate`; in production use your HTTPS site URL, set `ELEVATE_CORS_ORIGINS`, and change `API_BASE` in `js/auth.js` to the deployed Python API URL. Never commit SMTP/provider credentials. Password reset links are single-use and expire after 60 minutes. Back up the SQLite file regularly and use HTTPS in production. The website API is served by FastAPI in `backend/main.py`; the browser frontend connects to it on port 8000 during local development.
 
 ## Quality checklist
 
