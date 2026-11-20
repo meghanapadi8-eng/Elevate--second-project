@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: elevate-api-meghanapadi8-eng
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: ELEVATE_ENV
+        value: production
+      - key: ELEVATE_JWT_SECRET
+        generateValue: true
+      - key: ELEVATE_CORS_ORIGINS
+        value: https://meghanapadi8-eng.github.io
