@@ -26,6 +26,17 @@ To preserve existing MySQL accounts and records, back up your MySQL database, se
 
 Job Search uses live listings from the Himalayas public jobs API when Adzuna credentials are not set. No API key is needed for this fallback. Set `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` to prefer Adzuna. Configure `OPENAI_API_KEY` and optionally `OPENAI_MODEL` for generative AI; Copilot and career planning retain guided responses when AI is not configured.
 
+## Deploy the backend to Render
+
+The `render.yaml` Blueprint creates the Python API on Render's free instance with a generated JWT secret and a `/health` health check. The free instance has ephemeral storage: SQLite users and records can be lost when the service restarts, redeploys, or sleeps. Use durable storage before relying on this backend for important user data.
+
+1. Commit and push `render.yaml` to the repository's default branch, then connect the repository in Render.
+2. In Render, create a **Blueprint** from the repository and select this `render.yaml` file.
+3. Wait for the service to deploy, then open `https://<your-render-service>.onrender.com/health`. It should return `"ok": true`.
+4. Copy the assigned Render service URL into `API_BASE` at the top of `js/auth.js` (keep the trailing slash off), commit and push that change, then wait for the static GitHub Pages site to redeploy.
+
+The Blueprint allows the GitHub Pages origin configured above. If you host the frontend on a different domain, update `ELEVATE_CORS_ORIGINS` in Render to that origin. Add SMTP environment variables in Render before relying on password-reset email. Do not put secrets in frontend files or commit them.
+
 ## Static preview
 
 After enabling GitHub Pages with **Settings → Pages → Build and deployment → GitHub Actions**, the workflow publishes the project at `https://meghanapadi8-eng.github.io/Elevate--second-project/`. This is a static preview only: GitHub Pages does not run the FastAPI backend or SQLite database, so sign-in and server-synced features require a separately hosted API.
