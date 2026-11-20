@@ -2,7 +2,8 @@
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const TOKEN_KEY='elevate_auth_token';
   const USER_KEY='elevate_auth_user';
-  const API_BASE=window.ELEVATE_API_BASE||'http://127.0.0.1:8000';
+  const isLocal=location.hostname==='localhost'||location.hostname==='127.0.0.1';
+  const API_BASE=window.ELEVATE_API_BASE||(isLocal?'http://127.0.0.1:8000':'https://elevate-api-meghanapadi8-eng.onrender.com');
   const api=(path, options={})=>fetch(`${API_BASE}${path}`,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});
   window.ElevateAuth={
     url:path=>`${API_BASE}${path.startsWith('/')?path:`/${path}`}`,

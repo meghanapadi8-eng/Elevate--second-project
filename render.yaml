@@ -12,4 +12,4 @@ services:
       - key: ELEVATE_JWT_SECRET
         generateValue: true
       - key: ELEVATE_CORS_ORIGINS
-        value: https://meghanapadi8-eng.github.io
+        value: https://melevate.netlify.app,https://meghanapadi8-eng.github.io
