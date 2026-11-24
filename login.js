@@ -32,6 +32,15 @@
 
   $('forgotPasswordBtn').addEventListener('click',()=>setMode('forgot'));
 
+  $('togglePassword').addEventListener('click',()=>{
+    const password = $('password');
+    const show = password.type === 'password';
+    password.type = show ? 'text' : 'password';
+    $('togglePassword').setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    $('togglePassword').setAttribute('aria-pressed', String(show));
+    $('togglePassword').innerHTML = `<i class="bi ${show ? 'bi-eye-slash' : 'bi-eye'}" aria-hidden="true"></i>`;
+  });
+
   form.addEventListener('submit',async e=>{
     e.preventDefault();
     const emailValue = $('email').value.trim();
