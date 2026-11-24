@@ -1,24 +1,36 @@
-import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from backend import main
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 class BackendTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.temp_dir = tempfile.TemporaryDirectory()
-        main.DB_PATH = Path(cls.temp_dir.name) / "test.sqlite3"
+        # Keep the test database under the project directory. Some restricted
+        # environments cannot create or write SQLite databases in the OS temp
+        # directory, which prevents the app lifespan from starting.
+        cls.temp_dir = ROOT / ".test-data"
+        cls.temp_dir.mkdir(exist_ok=True)
+        main.DB_PATH = cls.temp_dir / "test.sqlite3"
         cls.client_context = TestClient(main.app)
         cls.client = cls.client_context.__enter__()
 
     @classmethod
     def tearDownClass(cls):
         cls.client_context.__exit__(None, None, None)
-        cls.temp_dir.cleanup()
+        for suffix in ("", "-shm", "-wal"):
+            database_file = Path(f"{main.DB_PATH}{suffix}")
+            if database_file.exists():
+                database_file.unlink()
+        cls.temp_dir.rmdir()
 
     def register(self, email):
         response = self.client.post(
@@ -83,6 +95,24 @@ class BackendTests(unittest.TestCase):
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["database"], "ok")
+
+    def test_guided_copilot_explains_when_ai_is_not_configured_or_unavailable(self):
+        no_key = main.guided_copilot("How do I improve my resume?", {}, ai_unavailable=False)
+        failed_provider = main.guided_copilot("How do I improve my resume?", {}, ai_unavailable=True)
+        self.assertIn("AI not configured", no_key)
+        self.assertIn("AI service unavailable", failed_provider)
+        self.assertNotIn("AI provider not configured", failed_provider)
+
+    def test_copilot_reports_provider_failure_as_guided_fallback(self):
+        headers = {"Authorization": f"Bearer {self.register('copilot-fallback@example.com')}"}
+        with patch.object(main, "GEMINI_KEY", "test-key"), patch.object(
+            main, "ai_text", side_effect=HTTPException(502, "provider unavailable")
+        ):
+            response = self.client.post("/copilot", headers=headers, json={"message": "How can I improve my resume?"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["mode"], "guided")
+        self.assertIn("AI service unavailable", response.json()["reply"])
+        self.assertNotIn("AI provider not configured", response.json()["reply"])
 
 
 if __name__ == "__main__":

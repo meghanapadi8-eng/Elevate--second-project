@@ -13,3 +13,7 @@ services:
         generateValue: true
       - key: ELEVATE_CORS_ORIGINS
         value: https://melevate.netlify.app,https://meghanapadi8-eng.github.io
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash

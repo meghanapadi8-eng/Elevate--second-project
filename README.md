@@ -24,7 +24,7 @@ The API creates `data/elevate.sqlite3` and its tables automatically. Static prod
 
 To preserve existing MySQL accounts and records, back up your MySQL database, set `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE`, then run `python migrate_mysql_to_sqlite.py` once before starting the API. The importer refuses to merge into a SQLite database that already contains users. Keep the MySQL backup until you have verified the imported records. Users should sign in again after migration.
 
-Job Search uses live listings from the Himalayas public jobs API when Adzuna credentials are not set. No API key is needed for this fallback. Set `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` to prefer Adzuna. Configure `OPENAI_API_KEY` and optionally `OPENAI_MODEL` for generative AI; Copilot and career planning retain guided responses when AI is not configured.
+Job Search uses live listings from the Himalayas public jobs API when Adzuna credentials are not set. No API key is needed for this fallback. Set `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` to prefer Adzuna. For generative AI, set `GEMINI_API_KEY` (preferred) or `OPENAI_API_KEY`; Copilot, resume tools, and career planning use the configured provider and retain guided responses when no key is set. For local development, put the Gemini key in `backend/.env` as `GEMINI_API_KEY=...`; this file is ignored by Git and read only by the Python API. Never put provider keys in browser JavaScript or HTML.
 
 ## Deploy the app
 
@@ -62,10 +62,10 @@ Configure these environment variables in the Python process (never in frontend J
 - `ELEVATE_SQLITE_PATH` (optional; defaults to `data/elevate.sqlite3`)
 - `ELEVATE_JWT_SECRET` (at least 32 characters; generate a unique random secret)
 - `ELEVATE_CORS_ORIGINS` (comma-separated allowed website origins; defaults to local development origins)
-- Optional integrations: `OPENAI_API_KEY`, `OPENAI_MODEL`, `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, and `ADZUNA_COUNTRY`
+- Optional integrations: `GEMINI_API_KEY`, `GEMINI_MODEL` (defaults to `gemini-3.8-flash`), `OPENAI_API_KEY`, `OPENAI_MODEL`, `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, and `ADZUNA_COUNTRY`
 - Password-reset email: `ELEVATE_BASE_URL`, `ELEVATE_SMTP_HOST`, `ELEVATE_SMTP_PORT`, `ELEVATE_SMTP_ENCRYPTION` (`tls` or `ssl`), `ELEVATE_SMTP_USERNAME`, `ELEVATE_SMTP_PASSWORD`, `ELEVATE_MAIL_FROM`, and optionally `ELEVATE_MAIL_FROM_NAME`
 
-Set the environment variables before starting Uvicorn. For local XAMPP, use `ELEVATE_BASE_URL=http://localhost/Elevate`; in production use your HTTPS site URL, set `ELEVATE_CORS_ORIGINS`, and change `API_BASE` in `js/auth.js` to the deployed Python API URL. Never commit SMTP/provider credentials. Password reset links are single-use and expire after 60 minutes. Back up the SQLite file regularly and use HTTPS in production. The website API is served by FastAPI in `backend/main.py`; the browser frontend connects to it on port 8000 during local development.
+Set production secrets in the API host's environment settings (Render prompts for `GEMINI_API_KEY` from `render.yaml`). For local XAMPP, use `ELEVATE_BASE_URL=http://localhost/Elevate`; in production use your HTTPS site URL, set `ELEVATE_CORS_ORIGINS`, and change `API_BASE` in `js/auth.js` to the deployed Python API URL. Never commit SMTP/provider credentials. Password reset links are single-use and expire after 60 minutes. Back up the SQLite file regularly and use HTTPS in production. The website API is served by FastAPI in `backend/main.py`; the browser frontend connects to it on port 8000 during local development.
 
 ## Quality checklist
 

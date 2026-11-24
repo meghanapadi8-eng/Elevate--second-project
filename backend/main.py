@@ -29,12 +29,34 @@ from fastapi.responses import JSONResponse
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_backend_env() -> None:
+    """Load backend/.env for local development without overriding process env."""
+    env_path = Path(__file__).with_name(".env")
+    try:
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        value = value.strip().strip("\"'")
+        if name.strip():
+            os.environ.setdefault(name.strip(), value)
+
+
+load_backend_env()
 DB_PATH = Path(os.getenv("ELEVATE_SQLITE_PATH", str(ROOT / "data" / "elevate.sqlite3")))
 IS_PRODUCTION = os.getenv("ELEVATE_ENV", "development").lower() == "production"
 JWT_SECRET = os.getenv("ELEVATE_JWT_SECRET", "" if IS_PRODUCTION else "Elevate_Local_2026_7fK9mP2xQ8vR4nL6").strip()
 TOKEN_TTL = 12 * 60 * 60
 OPENAI_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6-luna").strip()
+GEMINI_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip()
 rate_state: dict[tuple[str, str], tuple[float, int]] = {}
 rate_lock = threading.Lock()
 
@@ -810,29 +832,49 @@ def job_match(data: dict[str, Any], user: dict[str, Any] = Depends(current_user)
     return {"ok": True, "analysis": {"score": score, "keywordCoverage": keyword_percent, "matched": matched[:30], "missing": missing[:20], "recommendations": recommendations}}
 
 
-def openai_text(prompt: str, max_tokens: int = 900) -> str:
-    if not OPENAI_KEY:
-        raise HTTPException(503, "AI is not configured yet. Set OPENAI_API_KEY on the server.")
+def ai_text(prompt: str, max_tokens: int = 900) -> str:
+    if not OPENAI_KEY and not GEMINI_KEY:
+        raise HTTPException(503, "AI is not configured yet. Set GEMINI_API_KEY or OPENAI_API_KEY on the server.")
     try:
-        response = httpx.post(
-            "https://api.openai.com/v1/responses",
-            headers={"Authorization": f"Bearer {OPENAI_KEY}"},
-            json={"model": OPENAI_MODEL, "input": prompt, "max_output_tokens": max_tokens},
-            timeout=45,
-        )
+        if GEMINI_KEY:
+            response = httpx.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
+                headers={"x-goog-api-key": GEMINI_KEY},
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"maxOutputTokens": max_tokens},
+                },
+                timeout=45,
+            )
+        else:
+            response = httpx.post(
+                "https://api.openai.com/v1/responses",
+                headers={"Authorization": f"Bearer {OPENAI_KEY}"},
+                json={"model": OPENAI_MODEL, "input": prompt, "max_output_tokens": max_tokens},
+                timeout=45,
+            )
         response.raise_for_status()
     except httpx.HTTPError as exc:
-        logging.error("OpenAI request failed: %s", exc)
+        logging.error("AI provider request failed: %s", type(exc).__name__)
         raise HTTPException(502, "AI provider request failed.") from None
     result = response.json()
-    text = str(result.get("output_text") or "").strip()
-    if not text:
+    if GEMINI_KEY:
         text = "".join(
-            str(content.get("text") or "")
-            for output in result.get("output", [])
-            for content in output.get("content", [])
-            if isinstance(content, dict)
+            str(part.get("text") or "")
+            for candidate in result.get("candidates", [])
+            if isinstance(candidate, dict)
+            for part in (candidate.get("content", {}).get("parts", []) if isinstance(candidate.get("content"), dict) else [])
+            if isinstance(part, dict)
         ).strip()
+    else:
+        text = str(result.get("output_text") or "").strip()
+        if not text:
+            text = "".join(
+                str(content.get("text") or "")
+                for output in result.get("output", [])
+                for content in output.get("content", [])
+                if isinstance(content, dict)
+            ).strip()
     if not text:
         raise HTTPException(502, "AI returned an empty response.")
     return text
@@ -860,7 +902,7 @@ def ai_task(data: dict[str, Any], request: Request, user: dict[str, Any] = Depen
         f"\n\nITEM:\n{json_dump(payload.get('item', {}))}"
         f"\n\nJOB DESCRIPTION:\n{str(payload.get('jobDescription') or '')[:12000]}"
     )
-    return {"ok": True, "task": task, "text": openai_text(prompt, 700)}
+    return {"ok": True, "task": task, "text": ai_text(prompt, 700)}
 
 
 @app.post("/career-plan")
@@ -872,7 +914,7 @@ def career_plan(data: dict[str, Any], request: Request, user: dict[str, Any] = D
     career = context.get("careerResult") if isinstance(context.get("careerResult"), dict) else {}
     applications = context.get("applications") if isinstance(context.get("applications"), list) else []
     plan: dict[str, Any] = {"priorities": [], "skills": [], "weeks": [], "strategy": [], "notes": []}
-    if OPENAI_KEY:
+    if OPENAI_KEY or GEMINI_KEY:
         prompt = (
             "Create a personalized 30-day career plan. Return ONLY JSON with priorities (3-5 {title,detail}), "
             "skills (up to 6 {name,reason,level}), weeks (exactly 4 {title,text}), strategy (3-5 strings), "
@@ -881,7 +923,7 @@ def career_plan(data: dict[str, Any], request: Request, user: dict[str, Any] = D
             f"\nRESUME:\n{json_dump(resume)[:12000]}\nAPPLICATIONS:\n{json_dump(applications[:30])[:10000]}"
         )
         try:
-            plan = json.loads(openai_text(prompt, 1000))
+            plan = json.loads(ai_text(prompt, 1000))
             if isinstance(plan, dict) and plan.get("priorities"):
                 plan["ai"] = True
                 return {"ok": True, "ai": True, "plan": plan}
@@ -917,7 +959,7 @@ def career_plan(data: dict[str, Any], request: Request, user: dict[str, Any] = D
     return {"ok": True, "ai": False, "plan": plan}
 
 
-def guided_copilot(message: str, context: dict[str, Any]) -> str:
+def guided_copilot(message: str, context: dict[str, Any], *, ai_unavailable: bool = False) -> str:
     profile = context.get("profile") or {}
     resume = context.get("resume") or {}
     applications = context.get("applications") or []
@@ -957,7 +999,12 @@ def guided_copilot(message: str, context: dict[str, Any]) -> str:
         answer = "Here is a practical plan for this week:\n\n• " + "\n• ".join(steps[:4])
     else:
         answer = "I’m in guided mode, so I can help with your saved Elevate career data. Tell me whether you want help with your resume, ATS keywords, job search, or application follow-ups."
-    return "Guided Copilot (AI provider not configured):\n\n" + answer
+    status = (
+        "Guided Copilot (AI service unavailable; using saved career data):"
+        if ai_unavailable
+        else "Guided Copilot (AI not configured; using saved career data):"
+    )
+    return status + "\n\n" + answer
 
 
 @app.post("/copilot")
@@ -987,14 +1034,14 @@ def copilot(data: dict[str, Any], user: dict[str, Any] = Depends(current_user)):
         "career": json_load(career["data"], {}) if career else None,
     }
     reply, mode = "", "guided"
-    if OPENAI_KEY:
+    if OPENAI_KEY or GEMINI_KEY:
         prompt = "You are Elevate Career Copilot. Give concise practical career guidance using ONLY supplied context. Never invent experience, employers, achievements, skills or job facts. The user asks: " + message + "\nCONTEXT:\n" + json_dump(context)
         try:
-            reply, mode = openai_text(prompt), "ai"
+            reply, mode = ai_text(prompt), "ai"
         except HTTPException:
             logging.warning("Copilot AI request failed; using guided mode.")
     if not reply:
-        reply = guided_copilot(message, context)
+        reply = guided_copilot(message, context, ai_unavailable=bool(OPENAI_KEY or GEMINI_KEY))
     return {"ok": True, "mode": mode, "reply": reply}
 
 
