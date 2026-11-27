@@ -31,11 +31,11 @@ Job Search uses live listings from the Himalayas public jobs API when Adzuna cre
 The frontend is a static site hosted on Netlify; the Python API runs separately on Render. Netlify's build publishes only the root HTML, CSS, and JavaScript files plus `js/`, so backend source, configuration, and database files are not included in the site.
 
 1. Connect the repository to Netlify. The included `netlify.toml` builds and publishes the static frontend.
-2. In Render, create a **Blueprint** from the repository and select `render.yaml`. The Blueprint creates the Python API with a generated JWT secret and a `/health` health check.
+2. In Render, create or sync the **Blueprint** from `render.yaml`. It uses a paid Starter instance and a 1 GB persistent disk at `/var/data`. The API uses `/var/data/elevate.sqlite3`. For a service managed directly in the Render dashboard, apply the same plan, disk mount, and `ELEVATE_SQLITE_PATH` setting there.
 3. Wait for Render to deploy, then verify `https://elevate-api-meghanapadi8-eng.onrender.com/health` returns `"ok": true`.
 4. Netlify serves the frontend at `https://melevate.netlify.app`; `js/auth.js` uses the Render API outside localhost. The Render Blueprint allows this Netlify origin and the GitHub Pages origin.
 
-The Render free instance has ephemeral storage: SQLite users and records can be lost when the service restarts, redeploys, or sleeps. Use durable storage before relying on this backend for important user data. If you host the frontend on a different domain, update `ELEVATE_CORS_ORIGINS` in Render to include that exact origin. Add SMTP environment variables in Render before relying on password-reset email. Do not put secrets in frontend files or commit them.
+When upgrading from the free instance, restore any available SQLite backup to the persistent disk before accepting new signups. The disk starts empty. After deployment, verify persistence by creating a test account, restarting the API, and signing in with the same credentials. If you host the frontend on a different domain, update `ELEVATE_CORS_ORIGINS` in Render to include that exact origin. Add SMTP environment variables in Render before relying on password-reset email. Do not put secrets in frontend files or commit them.
 
 ## Project structure
 

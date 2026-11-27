@@ -2,13 +2,19 @@ services:
   - type: web
     name: elevate-api-meghanapadi8-eng
     runtime: python
-    plan: free
+    plan: starter
+    disk:
+      name: elevate-data
+      mountPath: /var/data
+      sizeGB: 1
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: ELEVATE_ENV
         value: production
+      - key: ELEVATE_SQLITE_PATH
+        value: /var/data/elevate.sqlite3
       - key: ELEVATE_JWT_SECRET
         generateValue: true
       - key: ELEVATE_CORS_ORIGINS
